@@ -46,6 +46,6 @@ def check_red_lines(payload: Any) -> Optional[Tuple[str, str]]:
     except (TypeError, ValueError):
         payload_str = str(payload)
     for pattern, reason in RED_LINES:
-        if pattern in payload_str:
+        if pattern.lower() in payload_str.lower():
             return pattern, reason
     return None

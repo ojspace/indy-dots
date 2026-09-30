@@ -19,12 +19,22 @@
         reverse_proxy indy-web:3000
     }
 
-    # Security headers
+    # Compress responses.
+    encode gzip
+
+    # Security headers. HSTS `preload` is intentionally OFF by default:
+    # only append `; preload` once {$DOMAIN} is a real production domain
+    # you control (preloading localhost/IPs breaks local access and is
+    # hard to undo).
     header {
-        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
         X-Content-Type-Options "nosniff"
         X-Frame-Options "DENY"
         Referrer-Policy "strict-origin-when-cross-origin"
+        # SPA: scripts stay 'self'; 'unsafe-inline' allowed for styles only
+        # (bundled CSS); frame-ancestors 'none' blocks clickjacking.
+        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
+        Permissions-Policy "camera=(), microphone=(), geolocation=()"
     }
 
     log {

@@ -6,6 +6,7 @@ Only /health is exempt. In production the server refuses to boot with the
 default dev token so an unauthenticated control plane can never ship.
 """
 from fastapi import Header, HTTPException, status
+import hmac
 
 from .config import settings
 
@@ -39,9 +40,8 @@ async def require_auth(
             detail="Missing or malformed Authorization header.",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    # Constant-time-ish compare; simple equality is acceptable for a
-    # single static token, but avoid leaking prefix-match behavior.
-    if credentials.strip() != expected:
+    # Constant-time compare to avoid timing leaks on prefix matching.
+    if not hmac.compare_digest(credentials.strip(), expected):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials.",

@@ -17,15 +17,22 @@ COMPOSE_FILE="$REPO_DIR/docker-compose.prod.yml"
 
 echo "[deploy] $(date -u '+%Y-%m-%dT%H:%M:%SZ') — starting reconciliation"
 
+# 0. Ensure host data dirs exist (fresh VPS may only have /opt/data subdirs
+#    from setup-hetzner.sh; custom DATA_DIR hosts may have none at all).
+mkdir -p "$WORKSPACE_DIR" "$PROFILES_DIR"
+
 # 1. Sync Workspace Protocols (AGENTS.md, SOUL.md, TOOLS.md, USER.md)
 if [ -d "$REPO_DIR/workspace-template" ]; then
-  rsync -av --checksum "$REPO_DIR/workspace-template/" "$WORKSPACE_DIR/"
+  # --delete: template is the source of truth; stale files in the target
+  # would otherwise linger forever. User content lives in vault/, untouched.
+  rsync -av --checksum --delete "$REPO_DIR/workspace-template/" "$WORKSPACE_DIR/"
   echo "[deploy] workspace protocols synced"
 fi
 
 # 2. Sync Role Profiles (Chief of Staff + Worker Fleet)
 if [ -d "$REPO_DIR/profiles" ]; then
-  rsync -av --checksum "$REPO_DIR/profiles/" "$PROFILES_DIR/"
+  # --delete: profiles/ is fully governed by the repo; removals propagate.
+  rsync -av --checksum --delete "$REPO_DIR/profiles/" "$PROFILES_DIR/"
   echo "[deploy] agent profiles synced"
 fi
 

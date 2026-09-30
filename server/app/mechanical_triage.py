@@ -21,6 +21,9 @@ def classify_incoming_intent(text: str) -> Dict[str, Any]:
     low = clean.lower()
 
     # 1. Direct command prefixes (canonical routing table)
+    if low.startswith("/search"):
+        parts = clean.split(maxsplit=1)
+        return {"route": "researcher", "tier": "worker", "action": "web_search", "query": parts[1] if len(parts) > 1 else ""}
     if low.startswith("/research") or low.startswith("/find"):
         return {"route": "researcher", "tier": "worker", "action": "deep_search", "query": clean.split(maxsplit=1)[-1]}
     if low.startswith("/write") or low.startswith("/draft"):

@@ -78,10 +78,28 @@ interface Metrics {
   }
 }
 
-// Resolve the API base: same-origin via Caddy/nginx proxy, or a configured override.
-const API_BASE = import.meta.env.VITE_GATEWAY_URL?.replace(/\/$/, '') || ''
+// Resolve the API base: strip trailing slashes and a trailing /api so `${API_BASE}/api/...` never double-prefixes.
+// VITE_GATEWAY_URL="/api" (prod) -> "" -> fetch("/api/..."); unset/"" (dev) -> "" -> fetch("/api/...");
+// VITE_GATEWAY_URL="http://gateway:8000" or ".../api" -> "http://gateway:8000" -> fetch("http://gateway:8000/api/...").
+const API_BASE = (import.meta.env.VITE_GATEWAY_URL || '/api').replace(/\/+$/, '').replace(/\/api$/, '')
 
 const TOKEN_STORAGE_KEY = 'indy_dots_auth_token'
+const SESSION_STORAGE_KEY = 'indy_dots_session_id'
+
+function getOrCreateSessionId(): string {
+  try {
+    let sid = localStorage.getItem(SESSION_STORAGE_KEY)
+    if (!sid) {
+      sid = (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+        ? crypto.randomUUID()
+        : `sess-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+      localStorage.setItem(SESSION_STORAGE_KEY, sid)
+    }
+    return sid
+  } catch {
+    return 'default'
+  }
+}
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'chat' | 'approvals' | 'fleet' | 'vault' | 'metrics'>('chat')
@@ -103,12 +121,14 @@ export default function App() {
   const [vaultNotes, setVaultNotes] = useState<VaultNote[]>([])
   const [metrics, setMetrics] = useState<Metrics | null>(null)
 
-  // Auth token: build-time env or user-entered (stored locally).
+  // Auth token: runtime-only via localStorage modal (no build-time bake).
+  // Accepted risk: localStorage persistence enables single-operator UX on a self-hosted node; cleared on logout.
   const [authToken, setAuthToken] = useState<string>(
-    import.meta.env.VITE_AUTH_TOKEN || localStorage.getItem(TOKEN_STORAGE_KEY) || ''
+    () => localStorage.getItem(TOKEN_STORAGE_KEY) || ''
   )
   const [showTokenModal, setShowTokenModal] = useState(false)
   const [tokenInput, setTokenInput] = useState('')
+  const [sessionId] = useState<string>(() => getOrCreateSessionId())
 
   const authHeaders = useCallback((): Record<string, string> => {
     return authToken ? { Authorization: `Bearer ${authToken}` } : {}
@@ -122,9 +142,17 @@ export default function App() {
     setShowTokenModal(false)
   }
 
+  const clearToken = () => {
+    localStorage.removeItem(TOKEN_STORAGE_KEY)
+    setAuthToken('')
+    setTokenInput('')
+    window.location.reload()
+  }
+
   const refreshApprovals = useCallback(async () => {
     try {
       const res = await fetch(`${API_BASE}/api/approvals`, { headers: authHeaders() })
+      if (res.status === 401) { setShowTokenModal(true); return }
       if (!res.ok) return
       const data = await res.json()
       setApprovals(
@@ -139,27 +167,126 @@ export default function App() {
     } catch { /* stale until gateway reachable */ }
   }, [authHeaders])
 
+  const fetchProfiles = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/profiles`, { headers: authHeaders() })
+      if (res.status === 401) { setShowTokenModal(true); return }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const d = await res.json()
+      setProfiles(d.profiles || [])
+    } catch { setProfiles([]) }
+  }, [authHeaders])
+
+  const fetchVault = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/vault?limit=50`, { headers: authHeaders() })
+      if (res.status === 401) { setShowTokenModal(true); return }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const d = await res.json()
+      setVaultNotes(d.notes || [])
+    } catch { setVaultNotes([]) }
+  }, [authHeaders])
+
+  const fetchMetrics = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/metrics`, { headers: authHeaders() })
+      if (res.status === 401) { setShowTokenModal(true); return }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const d = await res.json()
+      setMetrics(d)
+    } catch { setMetrics(null) }
+  }, [authHeaders])
+
   useEffect(() => {
     if (activeTab === 'approvals') refreshApprovals()
-    if (activeTab === 'fleet' && profiles.length === 0) {
-      fetch(`${API_BASE}/api/profiles`, { headers: authHeaders() })
-        .then(r => (r.ok ? r.json() : Promise.reject()))
-        .then(d => setProfiles(d.profiles || []))
-        .catch(() => setProfiles([]))
+    if (activeTab === 'fleet' && profiles.length === 0) fetchProfiles()
+    if (activeTab === 'vault' && vaultNotes.length === 0) fetchVault()
+    if (activeTab === 'metrics') fetchMetrics()
+  }, [activeTab, authToken, authHeaders, refreshApprovals, fetchProfiles, fetchVault, fetchMetrics, profiles.length, vaultNotes.length])
+
+  // Load persisted conversation history on mount / when auth or session changes.
+  useEffect(() => {
+    if (!authToken || !sessionId) return
+    let cancelled = false
+    fetch(
+      `${API_BASE}/api/conversations?session_id=${encodeURIComponent(sessionId)}&limit=200`,
+      { headers: authHeaders() }
+    )
+      .then(r => (r.ok ? r.json() : Promise.reject()))
+      .then(d => {
+        if (cancelled) return
+        const stored = (d.messages || []) as Array<{
+          id: number; role: string; content: string; created_at: string
+        }>
+        if (stored.length === 0) return
+        setMessages(
+          stored.map(m => ({
+            id: `hist-${m.id}`,
+            sender: m.role === 'user' ? ('user' as const) : ('agent' as const),
+            text: m.content,
+            role: m.role === 'user' ? undefined : 'atlas',
+            tier: m.role === 'user' ? undefined : 'worker',
+            verified: false,
+            timestamp: (() => {
+              try {
+                return new Date(m.created_at).toLocaleTimeString([], {
+                  hour: '2-digit', minute: '2-digit'
+                })
+              } catch {
+                return ''
+              }
+            })()
+          }))
+        )
+      })
+      .catch(() => { /* history is best-effort; keep welcome message */ })
+    return () => { cancelled = true }
+  }, [authToken, authHeaders, sessionId])
+
+  const clearHistory = async () => {
+    try {
+      await fetch(
+        `${API_BASE}/api/conversations?session_id=${encodeURIComponent(sessionId)}`,
+        { method: 'DELETE', headers: authHeaders() }
+      )
+    } catch { /* best-effort */ }
+    setMessages(prev => prev.slice(0, 1))
+  }
+
+  const applyAgentEvent = (
+    agentId: string,
+    ev: any,
+    state: { role: string; tier: string; verified: boolean; text: string; needsApprovalsRefresh: boolean }
+  ) => {
+    if (ev.type === 'route_decision') {
+      state.role = ev.role || state.role
+      state.tier = ev.model_tier || state.tier
     }
-    if (activeTab === 'vault' && vaultNotes.length === 0) {
-      fetch(`${API_BASE}/api/vault?limit=50`, { headers: authHeaders() })
-        .then(r => (r.ok ? r.json() : Promise.reject()))
-        .then(d => setVaultNotes(d.notes || []))
-        .catch(() => setVaultNotes([]))
+    if (ev.type === 'content_chunk' && typeof ev.chunk === 'string') {
+      state.text += ev.chunk
     }
-    if (activeTab === 'metrics') {
-      fetch(`${API_BASE}/api/metrics`, { headers: authHeaders() })
-        .then(r => (r.ok ? r.json() : Promise.reject()))
-        .then(d => setMetrics(d))
-        .catch(() => setMetrics(null))
+    if (ev.type === 'verification_gate_result' && ev.passed) {
+      state.verified = true
     }
-  }, [activeTab, authToken, authHeaders, refreshApprovals])
+    if (ev.type === 'approval_required') {
+      state.text = `⏸ Approval required (gate ${ev.gate_id}).\n\n${ev.message}\n\nReview it under Gate Approvals.`
+      state.needsApprovalsRefresh = true
+    }
+    if (ev.type === 'action_rejected') {
+      state.text = `⛔ Rejected by Red Lines (gate ${ev.gate_id}).\n\n${ev.message}`
+    }
+    if (ev.type === 'model_error') {
+      state.text = `⚠ Model call failed (${ev.model}).\n\n${ev.error}\n\nNo response was fabricated. Check the model API key and base URL.`
+    }
+    const snapshot = { ...state }
+    setMessages(prev =>
+      prev.map(m =>
+        m.id === agentId
+          ? { ...m, text: snapshot.text, role: snapshot.role, tier: snapshot.tier, verified: snapshot.verified }
+          : m
+      )
+    )
+  }
 
   const handleSend = async (e?: React.FormEvent) => {
     if (e) e.preventDefault()
@@ -176,97 +303,87 @@ export default function App() {
     setInputPrompt('')
     setLoading(true)
 
+    const agentId = (Date.now() + 1).toString()
+    const now = () =>
+      new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    // Streaming placeholder — content_chunk events append incrementally.
+    setMessages(prev => [
+      ...prev,
+      {
+        id: agentId,
+        sender: 'agent',
+        text: '',
+        role: 'atlas',
+        tier: 'worker',
+        verified: false,
+        timestamp: now()
+      }
+    ])
+    const state = { role: 'atlas', tier: 'worker', verified: false, text: '', needsApprovalsRefresh: false }
+    const failWith = (text: string) => {
+      setMessages(prev => prev.map(m => (m.id === agentId ? { ...m, text, timestamp: now() } : m)))
+    }
+
     try {
-      const response = await fetch(`${API_BASE}/api/chat`, {
+      const response = await fetch(`${API_BASE}/api/chat/stream`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify({ prompt: promptToSend })
+        headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream', ...authHeaders() },
+        body: JSON.stringify({ prompt: promptToSend, session_id: sessionId })
       })
 
-      if (response.ok) {
-        const data = await response.json()
-        let agentText = ''
-        let role = 'atlas'
-        let tier = 'worker'
-        let verified = false
-
-        data.events.forEach((ev: any) => {
-          if (ev.type === 'route_decision') {
-            role = ev.role
-            tier = ev.model_tier
-          }
-          if (ev.type === 'content_chunk') {
-            agentText += ev.chunk
-          }
-          if (ev.type === 'verification_gate_result' && ev.passed) {
-            verified = true
-          }
-          if (ev.type === 'approval_required') {
-            agentText = `⏸ Approval required (gate ${ev.gate_id}).\n\n${ev.message}\n\nReview it under Gate Approvals.`
-            refreshApprovals()
-          }
-          if (ev.type === 'action_rejected') {
-            agentText = `⛔ Rejected by Red Lines (gate ${ev.gate_id}).\n\n${ev.message}`
-          }
-          if (ev.type === 'model_error') {
-            agentText = `⚠ Model call failed (${ev.model}).\n\n${ev.error}\n\nNo response was fabricated. Check the model API key and base URL.`
-          }
-        })
-
-        setMessages(prev => [
-          ...prev,
-          {
-            id: (Date.now() + 1).toString(),
-            sender: 'agent',
-            text: agentText || 'Task processed, but the agent returned no content.',
-            role,
-            tier,
-            verified,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          }
-        ])
-      } else if (response.status === 401) {
+      if (response.status === 401) {
         setShowTokenModal(true)
-        setMessages(prev => [
-          ...prev,
-          {
-            id: (Date.now() + 1).toString(),
-            sender: 'agent',
-            text: '🔒 Unauthorized. Enter the gateway AUTH_TOKEN to continue (lock icon, top right).',
-            role: 'atlas',
-            tier: 'primary',
-            verified: false,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          }
-        ])
-      } else {
+        failWith('🔒 Unauthorized. Enter the gateway AUTH_TOKEN to continue (lock icon, top right).')
+        return
+      }
+      if (!response.ok || !response.body) {
         const detail = await response.text().catch(() => '')
-        setMessages(prev => [
-          ...prev,
-          {
-            id: (Date.now() + 1).toString(),
-            sender: 'agent',
-            text: `⚠ Gateway error ${response.status}. ${detail.slice(0, 200)}`.trim(),
-            role: 'atlas',
-            tier: 'primary',
-            verified: false,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        failWith(`⚠ Gateway error ${response.status}. ${detail.slice(0, 200)}`.trim())
+        return
+      }
+
+      // Minimal SSE parser over the POST stream (EventSource cannot POST).
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let dataLines: string[] = []
+      const flushEvent = () => {
+        if (dataLines.length === 0) return
+        const raw = dataLines.join('\n')
+        dataLines = []
+        try {
+          applyAgentEvent(agentId, JSON.parse(raw), state)
+        } catch { /* ignore malformed SSE payload */ }
+      }
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        let idx: number
+        while ((idx = buffer.indexOf('\n')) >= 0) {
+          const line = buffer.slice(0, idx).replace(/\r$/, '')
+          buffer = buffer.slice(idx + 1)
+          if (line === '') {
+            flushEvent()
+          } else if (line.startsWith('data:')) {
+            dataLines.push(line.slice(5).trimStart())
           }
-        ])
+          // 'event:' / ':' / 'id:' lines are framing — ignored.
+        }
+      }
+      if (buffer.length > 0) {
+        const line = buffer.replace(/\r$/, '')
+        if (line.startsWith('data:')) dataLines.push(line.slice(5).trimStart())
+      }
+      flushEvent()
+
+      if (!state.text) {
+        failWith('Task processed, but the agent returned no content.')
+      } else if (state.needsApprovalsRefresh) {
+        refreshApprovals()
       }
     } catch {
-      setMessages(prev => [
-        ...prev,
-        {
-          id: (Date.now() + 1).toString(),
-          sender: 'agent',
-          text: '⚠ Cannot reach the gateway. Check that the indy-gateway service is running and that /api routes are proxied correctly.',
-          role: 'atlas',
-          tier: 'primary',
-          verified: false,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        }
-      ])
+      failWith('⚠ Cannot reach the gateway. Check that the indy-gateway service is running and that /api routes are proxied correctly.')
     } finally {
       setLoading(false)
     }
@@ -351,6 +468,15 @@ export default function App() {
             {authToken ? <Lock className="w-3.5 h-3.5" /> : <KeyRound className="w-3.5 h-3.5" />}
             {authToken ? 'Authenticated' : 'Set token'}
           </button>
+          {authToken && (
+            <button
+              onClick={clearToken}
+              title="Clear stored token and reload"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition bg-slate-900 text-slate-400 border-slate-700 hover:text-rose-300 hover:border-rose-800"
+            >
+              Clear
+            </button>
+          )}
 
           <nav className="flex items-center gap-1 bg-[#1a2234] p-1 rounded-xl border border-slate-800">
             {([
@@ -453,6 +579,13 @@ export default function App() {
                   {label}
                 </button>
               ))}
+              <button
+                onClick={clearHistory}
+                title="Delete this session's persisted history"
+                className="ml-auto px-2.5 py-1 rounded-md bg-[#161f30] text-slate-500 hover:text-rose-300 hover:border-rose-800 border border-slate-700 transition whitespace-nowrap"
+              >
+                Clear history
+              </button>
             </div>
 
             {/* Input Bar */}
@@ -617,7 +750,7 @@ export default function App() {
                   </p>
                 </div>
                 <button
-                  onClick={() => setVaultNotes([])}
+                  onClick={() => fetchVault()}
                   className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 hover:border-indigo-500 transition"
                 >
                   <RefreshCw className="w-3.5 h-3.5" /> Refresh

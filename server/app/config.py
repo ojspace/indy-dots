@@ -46,4 +46,17 @@ class Settings(BaseModel):
     verification_max_passes: int = int(os.getenv("VERIFICATION_GATE_MAX_PASSES", "1"))
     approvals_mode: str = os.getenv("APPROVALS_MODE", "manual")
 
+    # Governed web search (You.com). Empty => keyless free profile.
+    ydc_api_key: str = os.getenv("YDC_API_KEY", "") or os.getenv("MCP_SEARCH_API_KEY", "")
+
+    # Opt-in computer runtime (P4). Default fake: deterministic inert stub.
+    computer_provider: str = os.getenv("COMPUTER_PROVIDER", "fake")
+    computer_docker_image: str = os.getenv("COMPUTER_DOCKER_IMAGE", "indy-dots-computer:latest")
+    computer_remote_url: str = os.getenv("COMPUTER_REMOTE_URL", "")
+    computer_remote_token: str = os.getenv("COMPUTER_REMOTE_TOKEN", "")
+    workspace_root: str = os.getenv("WORKSPACE_ROOT", os.path.join(_default_data_dir, "workspaces"))
+
+    # Routine scheduler (P5): in-process only, default OFF.
+    routines_enabled: bool = os.getenv("ROUTINES_ENABLED", "0").strip().lower() in ("1", "true", "yes", "on")
+
 settings = Settings()

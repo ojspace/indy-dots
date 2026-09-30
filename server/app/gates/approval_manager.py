@@ -1,5 +1,7 @@
 import json
+import fcntl
 import hashlib
+import html
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any, List, Optional
@@ -15,7 +17,8 @@ class ApprovalManager:
     """
 
     # Actions safe to auto-approve with a ledger trail (read-only class).
-    SAFE_ACTIONS = ("read_file", "search_web", "list_issues", "query_vault", "mechanical_triage")
+    # Writes (create_issue, mcp_write, send_email, ...) must NEVER be added here.
+    SAFE_ACTIONS = ("read_file", "search_web", "list_issues", "mcp_read", "query_vault", "mechanical_triage")
 
     def __init__(self, data_dir: Optional[str] = None):
         self.ledger_file = Path(data_dir or settings.data_dir) / "gate_ledger.jsonl"
@@ -96,6 +99,12 @@ class ApprovalManager:
             return {"approved": True, "status": "AUTO_APPROVED", "gate_id": action_hash}
 
         # Yellow Gate: Require Operator Approval
+        # HTML-escape user-controlled content in dry_run so ledger readers
+        # rendering it as HTML cannot be hit with stored XSS. The raw
+        # payload is preserved for execution; only the display copy is escaped.
+        def _esc(v: Any) -> Any:
+            return html.escape(str(v)) if isinstance(v, str) else v
+        safe_params = {k: _esc(v) for k, v in (payload or {}).items()} if isinstance(payload, dict) else _esc(payload)
         entry = {
             "id": action_hash,
             "timestamp": timestamp,
@@ -103,8 +112,8 @@ class ApprovalManager:
             "caller": caller,
             "status": "PENDING_APPROVAL",
             "dry_run": {
-                "summary": f"Requesting approval to execute {action_type}",
-                "parameters": payload,
+                "summary": html.escape(f"Requesting approval to execute {action_type}"),
+                "parameters": safe_params,
             },
             "payload": payload,
         }
@@ -121,26 +130,41 @@ class ApprovalManager:
     ) -> Dict[str, Any]:
         records = []
         target = None
-        if self.ledger_file.exists():
-            with open(self.ledger_file, "r") as f:
-                for line in f:
-                    if line.strip():
-                        try:
-                            rec = json.loads(line)
-                        except json.JSONDecodeError:
-                            continue
-                        if rec.get("id") == gate_id and rec.get("status") == "PENDING_APPROVAL":
-                            rec["status"] = "APPROVED" if approved else "DENIED"
-                            rec["resolved_at"] = datetime.now(timezone.utc).isoformat()
-                            rec["operator_note"] = operator_note
-                            target = rec
-                        records.append(rec)
+        # Exclusive lock around read-modify-write so concurrent resolvers
+        # cannot interleave and lose updates (whole-file rewrite).
+        lock_path = self.ledger_file.with_suffix(".lock")
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(lock_path, "a+") as lock_f:
+            try:
+                fcntl.flock(lock_f, fcntl.LOCK_EX)
+            except OSError:
+                pass
+            try:
+                if self.ledger_file.exists():
+                    with open(self.ledger_file, "r") as f:
+                        for line in f:
+                            if line.strip():
+                                try:
+                                    rec = json.loads(line)
+                                except json.JSONDecodeError:
+                                    continue
+                                if rec.get("id") == gate_id and rec.get("status") == "PENDING_APPROVAL":
+                                    rec["status"] = "APPROVED" if approved else "DENIED"
+                                    rec["resolved_at"] = datetime.now(timezone.utc).isoformat()
+                                    rec["operator_note"] = html.escape(str(operator_note)) if operator_note else operator_note
+                                    target = rec
+                                records.append(rec)
 
-        if target:
-            with open(self.ledger_file, "w") as f:
-                for rec in records:
-                    f.write(json.dumps(rec) + "\n")
-            return {"success": True, "record": target}
+                if target:
+                    with open(self.ledger_file, "w") as f:
+                        for rec in records:
+                            f.write(json.dumps(rec) + "\n")
+                    return {"success": True, "record": target}
+            finally:
+                try:
+                    fcntl.flock(lock_f, fcntl.LOCK_UN)
+                except OSError:
+                    pass
 
         return {"success": False, "error": f"Pending gate {gate_id} not found."}
 

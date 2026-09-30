@@ -33,9 +33,9 @@ if [ ! -f /swapfile ]; then
   chmod 600 /swapfile
   mkswap /swapfile >/dev/null
   swapon /swapfile
-  echo '/swapfile none swap sw 0 0' >> /etc/fstab
+  grep -q '^/swapfile none swap' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
   sysctl vm.swappiness=10
-  echo 'vm.swappiness=10' >> /etc/sysctl.conf
+  grep -q '^vm.swappiness=10' /etc/sysctl.conf || echo 'vm.swappiness=10' >> /etc/sysctl.conf
 else
   echo "[*] Swap file already present."
 fi
@@ -71,7 +71,9 @@ fi
 # 4. Provision Persistent Host Directories
 echo "[+] Creating persistent Indy-Dots directories at /opt/data..."
 mkdir -p /opt/data/{workspace,vault,profiles,google,handoffs,logs,backups}
-chmod -R 750 /opt/data
+# 755 (not 750): the gateway runs as an unprivileged UID inside the container
+# and needs traversal; secrets are protected individually (e.g. .env is 600).
+chmod -R 755 /opt/data
 
 # 5. Generate Environment Configuration if absent
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -82,7 +84,11 @@ if [ ! -f "$REPO_DIR/.env" ]; then
   RANDOM_SECRET=$(openssl rand -hex 32)
   sed -i "s|change-me-to-a-secure-random-token-min-32-chars|$RANDOM_SECRET|g" "$REPO_DIR/.env"
   sed -i "s|ENVIRONMENT=development|ENVIRONMENT=production|g" "$REPO_DIR/.env"
-  sed -i "s|DOMAIN:localhost|DOMAIN:$DOMAIN|g" "$REPO_DIR/Caddyfile"
+  # Caddy reads {$DOMAIN} from the container environment (see env_file in
+  # docker-compose.prod.yml) — never sed-edit Caddyfile per-host, just set it.
+  grep -q '^DOMAIN=' "$REPO_DIR/.env" \
+    && sed -i "s|^DOMAIN=.*|DOMAIN=$DOMAIN|" "$REPO_DIR/.env" \
+    || echo "DOMAIN=$DOMAIN" >> "$REPO_DIR/.env"
 
   chmod 600 "$REPO_DIR/.env"
   echo "[!] IMPORTANT: A secure AUTH_TOKEN was generated and written to $REPO_DIR/.env"

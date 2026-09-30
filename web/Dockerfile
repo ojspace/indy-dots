@@ -2,10 +2,14 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 COPY package.json package-lock.json* ./
-RUN npm ci || npm install
+RUN npm ci
 COPY . .
-ARG VITE_AUTH_TOKEN=""
-ENV VITE_AUTH_TOKEN=$VITE_AUTH_TOKEN
+# Vite inlines env vars at build time. VITE_GATEWAY_URL defaults to ""
+# (same-origin: the app falls back to fetch("/api/...")).
+ARG VITE_GATEWAY_URL=""
+ENV VITE_GATEWAY_URL=$VITE_GATEWAY_URL
+# NOTE: VITE_AUTH_TOKEN is intentionally NOT baked in — the dashboard
+# prompts for the token at runtime (stored in localStorage only).
 RUN npm run build
 
 FROM nginx:alpine

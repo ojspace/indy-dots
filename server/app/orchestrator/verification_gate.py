@@ -4,6 +4,16 @@ from typing import Awaitable, Callable, Dict, Optional, Tuple
 
 from ..config import settings
 
+
+def _resolve_primary_key() -> str:
+    """Resolve primary key via encrypted store, fallback to settings."""
+    try:
+        from ..security.credential_store import get_provider_key as _get_provider_key
+        stored = _get_provider_key("primary")
+    except Exception:
+        stored = ""
+    return stored or settings.primary_api_key
+
 # Evidence markers: URLs, file paths, code fences, numbers with units.
 _EVIDENCE_RE = re.compile(
     r"(https?://[^\s)]+|`[^`]+`|/[\w./-]{4,}|\b\d+(?:\.\d+)?\s?(?:ms|s|kb|mb|gb|%|usd|\$)\b)",
@@ -48,7 +58,7 @@ class VerificationGate:
             return False, reason, candidate_output
 
         # Model-based strict verification when a primary key is configured.
-        if settings.primary_api_key:
+        if _resolve_primary_key():
             verdict = await self._model_verify(task_prompt, candidate_output)
             if verdict is not None:
                 passed, reason = verdict
@@ -104,11 +114,12 @@ class VerificationGate:
             f"REASON: <concise reason>"
         )
         try:
+            api_key = _resolve_primary_key()
             async with httpx.AsyncClient(timeout=15.0) as client:
                 resp = await client.post(
                     f"{settings.primary_base_url}/chat/completions",
                     headers={
-                        "Authorization": f"Bearer {settings.primary_api_key}",
+                        "Authorization": f"Bearer {api_key}",
                         "Content-Type": "application/json",
                     },
                     json={

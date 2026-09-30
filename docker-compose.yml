@@ -5,8 +5,10 @@ services:
       dockerfile: Dockerfile
     container_name: indy-gateway
     restart: unless-stopped
+    # Loopback-only: Docker port publishes bypass UFW, so never bind 0.0.0.0
+    # on a dev machine — access via SSH tunnel if remote access is needed.
     ports:
-      - "8642:8642"
+      - "127.0.0.1:8642:8642"
     environment:
       - ENVIRONMENT=development
       - DATA_DIR=/opt/data
@@ -30,7 +32,8 @@ services:
       dockerfile: Dockerfile
     container_name: indy-web
     restart: unless-stopped
+    # Loopback-only (see note above — Docker publishes bypass UFW).
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     depends_on:
       - indy-gateway

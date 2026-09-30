@@ -25,11 +25,29 @@ Indy-Dots is a self-hosted control plane holding real credentials (LLM API keys)
 - **Yellow Lines** (publishing, emailing, ticket mutations, deletions, deploys) pause as `PENDING_APPROVAL` with a dry-run receipt until an operator resolves them via the API/UI.
 - The ledger (`gate_ledger.jsonl`) is append-only and auditable; a single shared policy module (`server/app/policy.py`) backs both the gateway and the CLI runner so rules cannot drift.
 
+### Secrets at rest
+- Provider keys resolve **env var > encrypted store > ""**. Keys saved via
+  `POST /api/settings/keys` are Fernet-encrypted (`APP_ENCRYPTION_KEY`, or a
+  generated `DATA_DIR/.encryption_key`) into `DATA_DIR/.provider_keys.json`.
+  Both files are `chmod 600`. Plaintext keys are never logged or echoed —
+  `GET /api/settings/keys` returns names + `configured` bools only, and a
+  blank save preserves the stored value.
+- Threat model: anyone with the box (or `APP_ENCRYPTION_KEY`) can decrypt the
+  store. This protects backups and casual file reads, not a root compromise.
+
 ### Known limitations (read before exposing beyond localhost)
 - Single static bearer token — no per-user identity, rotation, or rate limiting yet.
 - The approval API and the orchestrator run in the same process; an RCE in the gateway bypasses the gate.
+- The opt-in computer runtime (P4) is **not a hardened sandbox for hostile web**:
+  the gateway and approver share one process (see above), the docker profile's
+  read-only rootfs + dropped caps + resource limits are containment intent, not a
+  browser-exploit boundary, and the default `fake` provider is inert. Only point
+  it at untrusted pages from an isolated host you can afford to lose.
 - The verification gate calls your configured LLM; prompt-injection resistance of that verifier is not guaranteed.
 - SSE endpoint is POST-based; ensure proxies in front do not cache it.
+- The routine scheduler runs **in-process only** (no multi-worker/durable queue):
+  do not scale the gateway past one replica with `ROUTINES_ENABLED=1`, or
+  routines will run once per replica. It is OFF by default.
 
 ## Hardened deployment checklist
 1. `scripts/setup-hetzner.sh <domain>` (generates a 64-hex token into `.env` with `chmod 600`, never printed)

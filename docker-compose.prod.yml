@@ -3,6 +3,10 @@ services:
     image: caddy:2-alpine
     container_name: indy-caddy
     restart: unless-stopped
+    # Loads DOMAIN for the {$DOMAIN:...} placeholder in Caddyfile.
+    # Do NOT sed-edit Caddyfile per-host — set DOMAIN= in .env instead.
+    env_file:
+      - .env
     ports:
       - "80:80"
       - "443:443"
@@ -31,6 +35,8 @@ services:
     env_file:
       - .env
     volumes:
+      # Host-path self-bind: /opt/data on the host maps to /opt/data in the
+      # container. deploy.sh creates these dirs (mkdir -p) before syncing.
       - /opt/data:/opt/data:rw
       - /opt/data/workspace:/opt/data/workspace:rw
       - /opt/data/vault:/opt/data/vault:rw
@@ -51,16 +57,14 @@ services:
       context: ./web
       dockerfile: Dockerfile
       args:
-        # Baked at build time (Vite inlines env vars into the bundle).
-        # Server still enforces AUTH_TOKEN on every route — this only
-        # lets the dashboard authenticate itself.
-        - VITE_AUTH_TOKEN=${VITE_AUTH_TOKEN:-}
+        # Vite inlines env vars at BUILD time — runtime `environment:` entries
+        # named VITE_* are dead. Empty default = same-origin (/api proxied).
+        - VITE_GATEWAY_URL=
     container_name: indy-web
     restart: unless-stopped
     ports:
       - "127.0.0.1:3000:3000"
-    environment:
-      - VITE_GATEWAY_URL=/api
+    # NOTE: no VITE_* runtime env here — Vite already inlined them at build.
     deploy:
       resources:
         limits:
