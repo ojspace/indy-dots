@@ -124,6 +124,39 @@ If you're technical and want the same teammate pattern running under **your** ke
 
 ## Architecture
 
+```mermaid
+flowchart TD
+    U["Operator (browser)"] -->|HTTPS| C["Caddy :80/:443\nTLS + CSP/HSTS"]
+    C --> W["indy-web :3000\nReact: chat, approvals,\nfleet, vault, metrics"]
+    C --> G["indy-gateway :8642\nFastAPI + Bearer auth"]
+
+    W -->|"/api + Bearer"| G
+
+    G --> AUTH["auth.py\ncompare_digest +\nprod boot guard"]
+    G --> POL["policy.py\nred / yellow lines\nsingle source of truth"]
+    G --> TRI["mechanical_triage.py\nzero-token classifier"]
+
+    TRI --> COS["chief_of_staff.py\nroute → recall → gate →\ndispatch → verify → vault"]
+
+    COS --> REC["recall\nvault + conversations\nSQLite + Markdown"]
+    COS --> SCH["tools/web_search.py\nYou.com, SAFE read"]
+    COS --> CON["connectors/\ngithub + mcp_client\nread SAFE / write PENDING"]
+    COS --> CMP["computer/\nfake - docker - remote\nnever SAFE"]
+    COS --> RTE["routines/\nscheduler + store\n5m min, 50 max"]
+
+    COS --> GATE["gates/approval_manager.py\nPENDING_APPROVAL +\ndry-run receipt"]
+    GATE --> LED[("gate_ledger.jsonl\nappend-only")]
+    POL --> GATE
+
+    COS --> MOD["models (BYO keys)\nprimary reasoning /\ncheap workers"]
+    COS --> VER["verification_gate.py\nevidence check\nfail-closed, 1 retry"]
+    VER --> VLT[("vault\nMarkdown + SQLite")]
+    VLT --> REC
+
+    G --> SEC["security/credential_store.py\nFernet, env > store"]
+    G --> PRO["profiles/*.yaml\natlas, researcher,\nwriter, seo, ops, coder"]
+```
+
 <p align="center">
   <img src="web/public/brand/architecture.png" alt="Indy-Dots architecture: dashboard → orchestrator core (gates + vault) → Docker services on the VPS" width="720" />
 </p>
