@@ -1,0 +1,19 @@
+# Environment & Secrets
+.env
+*.env
+*.pem
+*.key
+sa-key.json
+google_token.json
+
+# Dependencies
+node_modules/
+dist/
+__pycache__/
+*.pyc
+
+# Local Data & State
+data/
+*.db
+*.log
+.DS_Store

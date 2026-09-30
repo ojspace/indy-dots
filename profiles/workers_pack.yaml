@@ -1,0 +1,46 @@
+name: seo
+role: search_and_visibility
+description: "Google Search Console performance analysis and keyword audit worker."
+model_preference:
+  tier: worker
+max_turns: 10
+allowed_toolsets:
+  - search_console
+  - web_search
+  - file_write
+disabled_toolsets:
+  - terminal
+  - linear
+  - email
+output_directory: /opt/data/handoffs/seo/
+---
+name: analyst
+role: quantitative_analysis
+description: "Data summarization and mechanical script invocation worker."
+model_preference:
+  tier: worker
+max_turns: 8
+allowed_toolsets:
+  - file_read
+  - file_write
+  - mechanical_triage
+disabled_toolsets:
+  - linear
+  - email
+output_directory: /opt/data/handoffs/analysis/
+---
+name: coder
+role: software_engineer
+description: "Codebase navigator, bug spotter, and patch generator."
+model_preference:
+  tier: primary
+max_turns: 15
+allowed_toolsets:
+  - workspace
+  - terminal
+  - file_read
+  - file_write
+disabled_toolsets:
+  - email
+  - social
+output_directory: /opt/data/handoffs/coder/

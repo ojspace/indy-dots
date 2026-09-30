@@ -1,0 +1,84 @@
+version: "3.8"
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: sovereign-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - sovereign-gateway
+      - sovereign-web
+
+  sovereign-gateway:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: sovereign-gateway
+    restart: unless-stopped
+    expose:
+      - "8642"
+    ports:
+      - "127.0.0.1:8642:8642"
+    environment:
+      - ENVIRONMENT=production
+      - DATA_DIR=/opt/data
+      - GATEWAY_HOST=0.0.0.0
+      - GATEWAY_PORT=8642
+    env_file:
+      - .env
+    volumes:
+      - /opt/data:/opt/data:rw
+      - /opt/data/workspace:/opt/data/workspace:rw
+      - /opt/data/vault:/opt/data/vault:rw
+      - ./profiles:/opt/data/profiles:ro
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2048M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8642/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+
+  sovereign-web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: sovereign-web
+    restart: unless-stopped
+    expose:
+      - "3000"
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      - VITE_GATEWAY_URL=/api
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+    depends_on:
+      - sovereign-gateway
+
+volumes:
+  caddy_data:
+  caddy_config:

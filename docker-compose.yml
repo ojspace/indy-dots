@@ -1,0 +1,40 @@
+version: "3.8"
+
+services:
+  sovereign-gateway:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: sovereign-gateway
+    restart: unless-stopped
+    ports:
+      - "8642:8642"
+    environment:
+      - ENVIRONMENT=development
+      - DATA_DIR=/opt/data
+      - GATEWAY_HOST=0.0.0.0
+      - GATEWAY_PORT=8642
+    env_file:
+      - .env
+    volumes:
+      - ./data:/opt/data:rw
+      - ./workspace-template:/opt/data/workspace:rw
+      - ./profiles:/opt/data/profiles:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8642/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  sovereign-web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: sovereign-web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_GATEWAY_URL=http://localhost:8642
+    depends_on:
+      - sovereign-gateway

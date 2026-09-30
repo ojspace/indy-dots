@@ -1,0 +1,19 @@
+name: researcher
+role: deep_research
+description: "Web research specialist. Gathers competitive intelligence, benchmarks, and data."
+model_preference:
+  tier: worker # Uses free or ultra-low-cost model (DeepSeek Chat, Nemotron Free, GLM Flash)
+max_turns: 12
+allowed_toolsets:
+  - web_search
+  - browser
+  - file_write
+disabled_toolsets:
+  - terminal
+  - linear
+  - email
+  - delete_operations
+output_directory: /opt/data/handoffs/research/
+system_prompt_addon: |
+  Focus exclusively on deep search, source citations, and factual synthesis.
+  Always cite URLs and specific metrics. Do not speculate.

@@ -1,0 +1,36 @@
+# Replace with your actual domain or Hetzner VPS IP
+{$DOMAIN:localhost} {
+    # Web UI Dashboard
+    handle /api/* {
+        uri strip_prefix /api
+        reverse_proxy sovereign-gateway:8642
+    }
+
+    handle /events* {
+        reverse_proxy sovereign-gateway:8642 {
+            # Enable SSE streaming
+            flush_interval -1
+        }
+    }
+
+    handle /ws* {
+        reverse_proxy sovereign-gateway:8642
+    }
+
+    handle {
+        reverse_proxy sovereign-web:3000
+    }
+
+    # Security headers
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "strict-origin-when-cross-origin"
+    }
+
+    log {
+        output stdout
+        format console
+    }
+}

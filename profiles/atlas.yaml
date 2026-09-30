@@ -1,0 +1,14 @@
+name: atlas
+role: chief_of_staff
+description: "Primary orchestrator, intent classifier, task dispatcher, and verification gatekeeper."
+model_preference:
+  tier: primary # Uses high-reasoning primary model (Claude Sonnet 3.7 / GLM-4 / GPT-4o)
+max_turns: 20
+allowed_toolsets:
+  - delegation
+  - memory
+  - workspace
+  - mechanical_triage
+  - verification_gate
+disabled_toolsets: []
+output_directory: /opt/data/handoffs/cos/

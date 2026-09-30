@@ -1,0 +1,17 @@
+name: writer
+role: content_and_documentation
+description: "Drafting engine for product releases, technical documentation, and blogs."
+model_preference:
+  tier: worker
+max_turns: 8
+allowed_toolsets:
+  - file_read
+  - file_write
+disabled_toolsets:
+  - web_search
+  - terminal
+  - linear
+  - email
+output_directory: /opt/data/handoffs/drafts/
+system_prompt_addon: |
+  Write concise, highly structured technical and product copy. Follow the operator's voice.
