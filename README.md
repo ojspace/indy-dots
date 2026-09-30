@@ -1,5 +1,5 @@
 # Indy-Dots ⚡
-### Self-Hosted, Cost-Disciplined AI Operator — an open alternative to Open-Dots
+### Self-Hosted, Cost-Disciplined AI Operator — built where Open-Dots stops
 
 <p align="center">
   <img src="web/public/brand/hero.png" alt="Indy-Dots — governed orchestrator with specialized agent fleet on a self-hosted VPS" width="820" />
@@ -46,15 +46,29 @@
 
 ```
 
-### Why this beats wiring every task through one big model
-| Concern | Typical open clones | Indy-Dots |
+### Why Indy-Dots is closer to a production AI operator than Open-Dots
+
+[Open-Dots](https://github.com/Anil-matcha/Open-Dots) proves the concept: one model,
+one loop, a tool grid, and a browser window. It works on localhost. Indy-Dots starts
+from that same idea but builds the three layers a real operator needs before you can
+run it unattended on a public VPS — and that is exactly where the two diverge:
+
+| Concern | Open-Dots | Indy-Dots |
 | :--- | :--- | :--- |
-| Intent routing | LLM call per task (costs tokens) | Regex/keyword classifier (**0 tokens**) |
-| Specialist models | One model for everything | Free/cheap workers + primary only for reasoning |
-| Dangerous actions | Prompt-level "please be safe" | Ledger-enforced gates with dry-run receipts |
-| Verification | None (trust the model) | Evidence-based gate, fail-closed, 1-pass cap |
-| Secrets handling | Often readable via tools | Auto-reject at the gate, ledger trail |
-| Memory | Flat session rows | Markdown vault compounding across restarts |
+| **Intent routing** | Every task starts with an LLM call — even "sort these rows" burns reasoning tokens | Zero-token mechanical classifier routes first; the model only sees real reasoning work |
+| **Model economics** | One model endpoint for everything | Free/cheap worker fleet (researcher, writer, seo, ops) + primary model only when the task needs reasoning |
+| **Dangerous actions** | Prompt-level "please be safe" — the model is trusted to obey | Ledger-enforced gates: mutations pause as `PENDING_APPROVAL` with dry-run receipts; red lines (`.env`, `rm -rf`, force-push) auto-reject — even for read-style requests |
+| **Verification** | Trusts the model's answer | Evidence-based gate: outputs must cite links/paths/code/data; fail-closed if the verifier is unreachable; exactly one corrective pass |
+| **Secrets** | Readable through the tool layer | Auto-rejected at the gate with a ledger trail |
+| **Memory** | Flat session rows in SQLite | Compounding Markdown vault (Obsidian-style) + SQLite index, recalled into future tasks |
+| **Deployment** | Run it on your laptop, localhost only | One-command hardened Hetzner bootstrap: swap, UFW, Docker, generated secrets, auto-HTTPS, loopback-bound services |
+| **Engineering discipline** | Prototype codebase | 71-test suite, CI on every push, non-root containers, pinned dependencies, security policy |
+
+**The short version:** Open-Dots answers *"can an LLM drive a tool grid?"* — yes.
+Indy-Dots answers the question you actually have once that runs on a $5 VPS with your
+API keys attached: *"what stops it from burning my tokens, leaking my secrets, or
+hallucinating a task done?"* Cost discipline, governance, and verification are
+architectural layers here, not prompts. That is what makes it closer to production.
 
 ---
 
