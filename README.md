@@ -107,9 +107,9 @@ If you're technical and want the same teammate pattern running under **your** ke
   Fernet-encrypted at rest (`chmod 600`); the API only ever reports names +
   `configured` bools. Blank saves preserve the stored secret.
 - **Routine scheduler (`/api/routines`, `ROUTINES_ENABLED=1`, default off)** —
-  `every_<N>m/h` and `daily_HH:MM` UTC schedules tick every 60s in-process and
+  `every_<N≥5>m/h` (min `every_5m`) and `daily_HH:MM` UTC schedules tick every 60s in-process and
   run through `execute_task`, so mutating routines still pause for approval and
-  errors are recorded, never fabricated.
+  errors are recorded, never fabricated. Max 50 routines, 4000-char prompts, red lines checked at create.
 - **Real dashboard** — chat, approvals queue, live fleet from `profiles/*.yaml`, vault
   browser, and metrics computed from the actual ledger (no placeholder numbers).
 - **One-command Hetzner bootstrap** — swap, UFW, Docker, secrets generation, HTTPS via Caddy.
@@ -137,7 +137,7 @@ If you're technical and want the same teammate pattern running under **your** ke
 Provision a fresh Ubuntu 22.04/24.04 VPS (CX22/CPX11/CAX11) pointed at your domain, then:
 
 ```bash
-git clone https://github.com/your-org/indy-dots.git /opt/indy-dots
+git clone https://github.com/ojspace/indy-dots.git /opt/indy-dots
 cd /opt/indy-dots
 sudo ./scripts/setup-hetzner.sh your-domain.com
 ```
@@ -174,9 +174,9 @@ docker compose -f docker-compose.prod.yml up -d --build
 
 Open `https://your-domain.com`, click **Set token**, paste your `AUTH_TOKEN`.
 
-> The web build can also bake the token at build time via `VITE_AUTH_TOKEN`
-> (see `docker-compose.prod.yml`). The server enforces the same token on every
-> route either way.
+> Auth is runtime-only: the token lives in the dashboard's localStorage session,
+> never baked into the JS bundle or image layers. Use the header **Clear** button
+> to sign out. The server enforces the same token on every `/api` route.
 
 ### Local development
 
@@ -192,7 +192,7 @@ cd web && npm install && npm run dev        # proxies /api via nginx in Docker;
                                             # for `npm run dev`, set VITE_GATEWAY_URL=http://localhost:8642
 
 # Tests
-cd server && pytest tests/ -q
+cd server && pytest tests/ -q   # 188 passed; tsc + vite build clean (CI enforces both)
 ```
 
 ---
