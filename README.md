@@ -1,5 +1,5 @@
 # Indy-Dots ⚡
-### Self-Hosted, Cost-Disciplined AI Operator — built where Open-Dots stops
+### Self-Hosted AI Teammates — the open, cost-disciplined counterpart to OpenAI's Dot & xAI's Grok Bot
 
 <p align="center">
   <img src="web/public/brand/hero.png" alt="Indy-Dots — governed orchestrator with specialized agent fleet on a self-hosted VPS" width="820" />
@@ -8,6 +8,47 @@
 > Run a private AI operator on a $5/mo Hetzner VPS: tiered model routing, zero-token
 > mechanical triage, ledger-backed safety gates, and a compounding Markdown vault.
 > No SaaS connectors. No fabricated dashboards. MIT licensed.
+
+---
+
+## 🙏 Credits: the products that defined this category
+
+Indy-Dots exists because two closed products proved that AI teammates — not chatbots —
+are how this technology should work:
+
+- **[Grok Bot](https://grok.com) (xAI)** — the blueprint for bot teams. Bots that sign
+  in to your tools once and use them like you do, work in parallel 24/7, learn routines
+  by watching you do a task once, and — the part we admire most — **pause for operator
+  approval before anything goes out** ("36 drafts queued · 0 sent"). Its fleet even
+  ships a **Chief of Staff** coordinating the specialists; our `atlas` profile is a
+  direct homage to that design.
+- **OpenAI's Dot bot** — for mainstreaming the "dots" vision: many small, specialized
+  agents orbiting one orchestrator, doing real work in your tools instead of chatting
+  about it.
+
+*(and to [Open-Dots](https://github.com/Anil-matcha/Open-Dots) for showing an open
+implementation of the idea was possible.)*
+
+Both Grok Bot and Dot are brilliant. Both are also closed SaaS: seat pricing, their
+cloud, their guardrails, their definition of "safe". **Indy-Dots takes the same vision
+and inverts the trade: you own the loop.**
+
+### What self-hosting changes
+
+| Concern | Grok Bot / Dot (SaaS) | Indy-Dots (self-hosted) |
+| :--- | :--- | :--- |
+| **Hosting** | Their cloud | Your $4–6/mo Hetzner VPS — nothing leaves your box except model calls you choose |
+| **Price** | $20–$40/seat/mo | VPS + your own model keys; free/cheap worker tiers for specialists |
+| **Cost discipline** | Opaque usage limits | Zero-token mechanical routing + tiered fleet; every dispatch is visible |
+| **Approval gates** | Bots pause for your OK (a great idea!) | Same pattern, but enforced in code: append-only JSONL ledger, dry-run receipts, red lines you define in one file |
+| **Verification** | Trust the bot's report | Evidence-based gate: outputs must cite links/paths/data or they fail; fail-closed; 1 corrective pass |
+| **Secrets** | Handled inside their platform | Auto-rejected at the gate with a ledger trail — even read-style requests |
+| **Memory** | On their servers | Your Markdown vault + SQLite index — exportable, Obsidian-friendly, compounds across restarts |
+| **License** | Closed | MIT — inspect it, fork it, run it anywhere |
+
+If you want the polished SaaS experience and accept the trade, pay them — they're good.
+If you want the same teammate pattern running under **your** keys on a **$5** VPS with
+**auditable** governance, keep reading.
 
 ---
 
@@ -45,30 +86,6 @@
 </p>
 
 ```
-
-### Why Indy-Dots is closer to a production AI operator than Open-Dots
-
-[Open-Dots](https://github.com/Anil-matcha/Open-Dots) proves the concept: one model,
-one loop, a tool grid, and a browser window. It works on localhost. Indy-Dots starts
-from that same idea but builds the three layers a real operator needs before you can
-run it unattended on a public VPS — and that is exactly where the two diverge:
-
-| Concern | Open-Dots | Indy-Dots |
-| :--- | :--- | :--- |
-| **Intent routing** | Every task starts with an LLM call — even "sort these rows" burns reasoning tokens | Zero-token mechanical classifier routes first; the model only sees real reasoning work |
-| **Model economics** | One model endpoint for everything | Free/cheap worker fleet (researcher, writer, seo, ops) + primary model only when the task needs reasoning |
-| **Dangerous actions** | Prompt-level "please be safe" — the model is trusted to obey | Ledger-enforced gates: mutations pause as `PENDING_APPROVAL` with dry-run receipts; red lines (`.env`, `rm -rf`, force-push) auto-reject — even for read-style requests |
-| **Verification** | Trusts the model's answer | Evidence-based gate: outputs must cite links/paths/code/data; fail-closed if the verifier is unreachable; exactly one corrective pass |
-| **Secrets** | Readable through the tool layer | Auto-rejected at the gate with a ledger trail |
-| **Memory** | Flat session rows in SQLite | Compounding Markdown vault (Obsidian-style) + SQLite index, recalled into future tasks |
-| **Deployment** | Run it on your laptop, localhost only | One-command hardened Hetzner bootstrap: swap, UFW, Docker, generated secrets, auto-HTTPS, loopback-bound services |
-| **Engineering discipline** | Prototype codebase | 71-test suite, CI on every push, non-root containers, pinned dependencies, security policy |
-
-**The short version:** Open-Dots answers *"can an LLM drive a tool grid?"* — yes.
-Indy-Dots answers the question you actually have once that runs on a $5 VPS with your
-API keys attached: *"what stops it from burning my tokens, leaking my secrets, or
-hallucinating a task done?"* Cost discipline, governance, and verification are
-architectural layers here, not prompts. That is what makes it closer to production.
 
 ---
 
