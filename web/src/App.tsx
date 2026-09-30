@@ -130,7 +130,7 @@ export default function App() {
           {
             id: (Date.now() + 1).toString(),
             sender: 'agent',
-            text: `[Sovereign-Dots Orchestrator]\nAction processed for: "${promptToSend}". Verification Gate passed (1 pass max). Recorded in vault.`,
+            text: `[Indy-Dots Orchestrator]\nAction processed for: "${promptToSend}". Verification Gate passed (1 pass max). Recorded in vault.`,
             role: promptToSend.startsWith('/research') ? 'researcher' : 'atlas',
             tier: promptToSend.startsWith('/research') ? 'worker' : 'primary',
             verified: true,
@@ -171,7 +171,7 @@ export default function App() {
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-lg tracking-tight">Sovereign-Dots</span>
+              <span className="font-semibold text-lg tracking-tight">Indy-Dots</span>
               <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                 Hetzner Cloud Node
@@ -314,7 +314,7 @@ export default function App() {
                 /ops triage
               </button>
               <button
-                onClick={() => setInputPrompt('/write changelog for sovereign-dots v1.0 release')}
+                onClick={() => setInputPrompt('/write changelog for indy-dots v1.0 release')}
                 className="px-2.5 py-1 rounded-md bg-[#161f30] text-slate-300 hover:border-indigo-500 border border-slate-700 transition"
               >
                 /write changelog
@@ -502,7 +502,7 @@ export default function App() {
                   Token Economics & VPS Vitality
                 </h2>
                 <p className="text-sm text-slate-400">
-                  Real numbers comparing Sovereign-Dots to monolithic alternatives.
+                  Real numbers comparing Indy-Dots to monolithic alternatives.
                 </p>
               </div>
 

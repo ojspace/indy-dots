@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Sovereign-Dots: 1-Click Hetzner VPS Bootstrap Script
+# Indy-Dots: 1-Click Hetzner VPS Bootstrap Script
 # Tested on Ubuntu 22.04 / 24.04 LTS (Hetzner Cloud CX22, CPX11, CAX11)
 # ==============================================================================
 set -euo pipefail
 
 echo "======================================================"
-echo "    SOVEREIGN-DOTS — HETZNER CLOUD PROVISIONER        "
+echo "    INDY-DOTS — HETZNER CLOUD PROVISIONER        "
 echo "======================================================"
 
 if [ "$EUID" -ne 0 ]; then
@@ -69,7 +69,7 @@ else
 fi
 
 # 4. Provision Persistent Host Directories
-echo "[+] Creating persistent Sovereign-Dots directories at /opt/data..."
+echo "[+] Creating persistent Indy-Dots directories at /opt/data..."
 mkdir -p /opt/data/{workspace,vault,profiles,google,handoffs,logs,backups}
 chmod -R 750 /opt/data
 

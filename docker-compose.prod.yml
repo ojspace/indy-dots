@@ -3,7 +3,7 @@ version: "3.8"
 services:
   caddy:
     image: caddy:2-alpine
-    container_name: sovereign-caddy
+    container_name: indy-caddy
     restart: unless-stopped
     ports:
       - "80:80"
@@ -13,14 +13,14 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     depends_on:
-      - sovereign-gateway
-      - sovereign-web
+      - indy-gateway
+      - indy-web
 
-  sovereign-gateway:
+  indy-gateway:
     build:
       context: ./server
       dockerfile: Dockerfile
-    container_name: sovereign-gateway
+    container_name: indy-gateway
     restart: unless-stopped
     expose:
       - "8642"
@@ -54,11 +54,11 @@ services:
       timeout: 5s
       retries: 3
 
-  sovereign-web:
+  indy-web:
     build:
       context: ./web
       dockerfile: Dockerfile
-    container_name: sovereign-web
+    container_name: indy-web
     restart: unless-stopped
     expose:
       - "3000"
@@ -77,7 +77,7 @@ services:
         max-size: "5m"
         max-file: "2"
     depends_on:
-      - sovereign-gateway
+      - indy-gateway
 
 volumes:
   caddy_data:

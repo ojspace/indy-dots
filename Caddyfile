@@ -3,22 +3,22 @@
     # Web UI Dashboard
     handle /api/* {
         uri strip_prefix /api
-        reverse_proxy sovereign-gateway:8642
+        reverse_proxy indy-gateway:8642
     }
 
     handle /events* {
-        reverse_proxy sovereign-gateway:8642 {
+        reverse_proxy indy-gateway:8642 {
             # Enable SSE streaming
             flush_interval -1
         }
     }
 
     handle /ws* {
-        reverse_proxy sovereign-gateway:8642
+        reverse_proxy indy-gateway:8642
     }
 
     handle {
-        reverse_proxy sovereign-web:3000
+        reverse_proxy indy-web:3000
     }
 
     # Security headers

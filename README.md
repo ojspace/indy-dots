@@ -1,4 +1,4 @@
-# Sovereign-Dots ⚡
+# Indy-Dots ⚡
 ### Autonomous, Cost-Disciplined Alternative to OpenAI Dots & Open-Dots
 
 > Built on the production-proven **Hetzner + Hermes** multi-tier orchestration architecture.
@@ -17,11 +17,11 @@ Projects like [Open-Dots](https://github.com/Anil-matcha/Open-Dots) and OpenAI D
 
 ---
 
-## 🏛️ How Sovereign-Dots Solves This (The Hetzner Hermes Approach)
+## 🏛️ How Indy-Dots Solves This (The Hetzner Hermes Approach)
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│              Sovereign Access (Telegram / Web UI / TUI)         │
+│              Indy Access (Telegram / Web UI / TUI)         │
 └────────────────────────────────┬────────────────────────────────┘
                                  │
 ┌────────────────────────────────▼────────────────────────────────┐
@@ -50,7 +50,7 @@ Projects like [Open-Dots](https://github.com/Anil-matcha/Open-Dots) and OpenAI D
 
 ### Feature Comparison Matrix
 
-| Capability | OpenAI Dots | Open-Dots (Anil Matcha) | **Sovereign-Dots (Your Stack)** |
+| Capability | OpenAI Dots | Open-Dots (Anil Matcha) | **Indy-Dots (Your Stack)** |
 | :--- | :--- | :--- | :--- |
 | **Hosting Model** | Closed SaaS | Local PC / Prototype Docker | **Production Hetzner VPS ($4–$6/mo)** |
 | **Model Cost Strategy** | Fixed OpenAI Pricing | Single model endpoint (expensive) | **Tiered Model Routing + Free Sub-Agents** |
@@ -71,8 +71,8 @@ Provision a fresh Debian/Ubuntu VPS on Hetzner Cloud (e.g. CX22 or CPX11) and ru
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/sovereign-dots.git /opt/sovereign-dots
-cd /opt/sovereign-dots
+git clone https://github.com/your-org/indy-dots.git /opt/indy-dots
+cd /opt/indy-dots
 
 # Run the 1-click bootstrap script
 sudo ./scripts/setup-hetzner.sh your-domain.com
@@ -87,7 +87,7 @@ The setup script automatically:
 
 ### 2. Configure Environment
 
-Edit `/opt/sovereign-dots/.env`:
+Edit `/opt/indy-dots/.env`:
 
 ```bash
 # Set your primary orchestrator key (Claude 3.7, GLM-4, etc.)
@@ -140,4 +140,4 @@ Access your secure control plane at `https://your-domain.com`.
 ---
 
 ## 📜 License
-MIT License. Sovereign, self-hostable, and inspectable.
+MIT License. Indy, self-hostable, and inspectable.

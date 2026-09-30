@@ -1,11 +1,11 @@
 version: "3.8"
 
 services:
-  sovereign-gateway:
+  indy-gateway:
     build:
       context: ./server
       dockerfile: Dockerfile
-    container_name: sovereign-gateway
+    container_name: indy-gateway
     restart: unless-stopped
     ports:
       - "8642:8642"
@@ -26,15 +26,15 @@ services:
       timeout: 5s
       retries: 3
 
-  sovereign-web:
+  indy-web:
     build:
       context: ./web
       dockerfile: Dockerfile
-    container_name: sovereign-web
+    container_name: indy-web
     restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
       - VITE_GATEWAY_URL=http://localhost:8642
     depends_on:
-      - sovereign-gateway
+      - indy-gateway

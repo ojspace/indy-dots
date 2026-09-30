@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Sovereign-Dots: deploy.sh — GitOps Reconciliation & Zero-Downtime Sync
+# Indy-Dots: deploy.sh — GitOps Reconciliation & Zero-Downtime Sync
 # Run after git pull. Safe to execute idempotently.
 # ==============================================================================
 set -euo pipefail
@@ -32,7 +32,7 @@ if [ -f "$COMPOSE_FILE" ]; then
   
   if [ "${RELOAD_CONTAINERS:-1}" = "1" ]; then
     echo "[deploy] updating and reconciling running containers..."
-    docker compose -f "$COMPOSE_FILE" up -d --no-build sovereign-gateway sovereign-web caddy
+    docker compose -f "$COMPOSE_FILE" up -d --no-build indy-gateway indy-web caddy
     echo "[deploy] services reconciled successfully"
   fi
 fi

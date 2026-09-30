@@ -21,7 +21,7 @@ class VerificationGate:
         # If primary model API key is configured, perform strict verification evaluation
         if settings.primary_api_key:
             verification_prompt = (
-                f"You are the Sovereign-Dots Verification Gate.\n"
+                f"You are the Indy-Dots Verification Gate.\n"
                 f"TASK ASK: {task_prompt}\n"
                 f"CANDIDATE OUTPUT TO VERIFY:\n{candidate_output}\n\n"
                 f"Check with fresh eyes: Does this candidate output actually fulfill the ask with concrete evidence "

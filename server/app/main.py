@@ -12,7 +12,7 @@ from .gates.approval_manager import approval_manager
 from .memory.vault import knowledge_vault
 
 app = FastAPI(
-    title="Sovereign-Dots API Gateway",
+    title="Indy-Dots API Gateway",
     description="Autonomous, cost-disciplined Dots competitor running on Hetzner Hermes architecture.",
     version="1.0.0"
 )
@@ -38,7 +38,7 @@ class ApprovalResolutionRequest(BaseModel):
 async def health_check():
     return {
         "status": "healthy",
-        "service": "sovereign-dots-gateway",
+        "service": "indy-dots-gateway",
         "environment": settings.environment,
         "primary_model": settings.primary_model,
         "worker_model": settings.worker_model

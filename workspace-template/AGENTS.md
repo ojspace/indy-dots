@@ -1,4 +1,4 @@
-# Sovereign-Dots Governance & Orchestration Protocol
+# Indy-Dots Governance & Orchestration Protocol
 
 ## 1. RED LINES — Automatic Rejection (Zero Tolerance)
 These operations are NEVER executed under any circumstance:

@@ -1,6 +1,6 @@
 # TOOLS.md — Native Model Context Protocol (MCP) Governance
 
-Sovereign-Dots uses self-hosted native MCP servers rather than external third-party middleware.
+Indy-Dots uses self-hosted native MCP servers rather than external third-party middleware.
 
 ### 1. `mcp-workspace` (Local Host & Container Tools)
 - `file_read`: Read files up to 100,000 chars.

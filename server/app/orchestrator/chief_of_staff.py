@@ -51,7 +51,7 @@ class ChiefOfStaff:
         base_url = settings.primary_base_url if route["model_tier"] == "primary" else settings.worker_base_url
 
         system_instruction = (
-            f"You are {route['role']} in the Sovereign-Dots autonomous system.\n"
+            f"You are {route['role']} in the Indy-Dots autonomous system.\n"
             f"Role profile: {route['profile']}.\n"
             f"Follow extreme token discipline: concise, factual, no pleasantries.\n"
             f"If an external mutation is needed, format it clearly for governance review."
@@ -91,7 +91,7 @@ class ChiefOfStaff:
                 yield {"type": "content_chunk", "chunk": output_text}
         else:
             output_text = (
-                f"[Sovereign-Dots Autonomous Engine]\n"
+                f"[Indy-Dots Autonomous Engine]\n"
                 f"• Dispatched to role: `{route['role']}` (Tier: `{route['model_tier']}`)\n"
                 f"• Task: \"{prompt}\"\n"
                 f"• Status: Successfully completed via Hetzner Hermes orchestration.\n"
