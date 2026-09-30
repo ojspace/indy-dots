@@ -1,22 +1,20 @@
 # Replace with your actual domain or Hetzner VPS IP
 {$DOMAIN:localhost} {
-    # Web UI Dashboard
+    # API gateway — FastAPI routes are defined WITH the /api prefix,
+    # so the prefix must be passed through untouched (no strip_prefix).
+    # flush_interval -1 keeps SSE streaming live (/api/chat/stream).
     handle /api/* {
-        uri strip_prefix /api
-        reverse_proxy indy-gateway:8642
-    }
-
-    handle /events* {
         reverse_proxy indy-gateway:8642 {
-            # Enable SSE streaming
             flush_interval -1
         }
     }
 
-    handle /ws* {
+    # Gateway health probe
+    handle /health {
         reverse_proxy indy-gateway:8642
     }
 
+    # Web UI Dashboard (SPA fallback)
     handle {
         reverse_proxy indy-web:3000
     }

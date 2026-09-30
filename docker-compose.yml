@@ -34,7 +34,5 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000"
-    environment:
-      - VITE_GATEWAY_URL=http://localhost:8642
     depends_on:
       - indy-gateway

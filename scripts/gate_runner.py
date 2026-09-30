@@ -1,16 +1,19 @@
-#!/usr/bin/env python3
-"""
-gate_runner.py — Governed Action Gate & Dry-Run Ledger
-Enforces hard safety gates for destructive or public operations (social posting,
-email sending, database mutation, bulk filesystem operations).
-"""
-
-import sys
 import json
 import os
-import hashlib
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Dict, Any
+
+# Allow the server package to be imported when this script runs from a repo
+# checkout (server/ is on sys.path when invoked as `python -m scripts.gate_runner`
+# from server/, or standalone with PYTHONPATH set).
+try:
+    from app.policy import check_red_lines
+except ImportError:  # pragma: no cover - fallback for repo-root invocation
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "server"))
+    from app.policy import check_red_lines
+
 
 def get_ledger_path() -> Path:
     env_dir = os.environ.get("DATA_DIR")
@@ -33,30 +36,24 @@ def record_gate_request(action_type: str, payload: dict, operator_approved: bool
     If high-risk and not explicitly approved, logs to ledger in PENDING state and halts.
     """
     timestamp = datetime.now(timezone.utc).isoformat()
-    action_hash = hashlib.sha256(f"{action_type}:{json.dumps(payload, sort_keys=True)}".encode()).hexdigest()[:12]
-    
-    # Red Line Checks
-    red_lines = [
-        ("rm -rf", "Irreversible destructive filesystem action"),
-        ("git push --force", "History rewriting on remote"),
-        ("DROP TABLE", "Database destruction"),
-        ("id_rsa", "Private credential exposure"),
-        (".env", "Environment secret file access"),
-    ]
-    
-    payload_str = json.dumps(payload)
-    for trigger, reason in red_lines:
-        if trigger in payload_str:
-            entry = {
-                "id": action_hash,
-                "timestamp": timestamp,
-                "action": action_type,
-                "status": "AUTO_REJECTED",
-                "reason": f"Violates RED LINE: {reason}",
-                "payload": payload
-            }
-            _append_ledger(entry)
-            return {"status": "REJECTED", "code": 403, "detail": entry["reason"]}
+    action_hash = __import__("hashlib").sha256(
+        f"{action_type}:{json.dumps(payload, sort_keys=True)}".encode()
+    ).hexdigest()[:12]
+
+    # Red Line Checks — shared policy module (single source of truth)
+    hit = check_red_lines(payload)
+    if hit:
+        pattern, reason = hit
+        entry = {
+            "id": action_hash,
+            "timestamp": timestamp,
+            "action": action_type,
+            "status": "AUTO_REJECTED",
+            "reason": f"Violates RED LINE: {reason}",
+            "payload": payload
+        }
+        _append_ledger(entry)
+        return {"status": "REJECTED", "code": 403, "detail": entry["reason"]}
 
     # Yellow Line (Dry Run & Human Approval Required)
     if not operator_approved:

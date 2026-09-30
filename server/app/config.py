@@ -1,6 +1,6 @@
 import os
 from pydantic import BaseModel
-from typing import Optional
+from typing import List, Optional
 
 def _resolve_data_dir() -> str:
     env_dir = os.getenv("DATA_DIR")
@@ -17,9 +17,16 @@ def _resolve_data_dir() -> str:
 
 _default_data_dir = _resolve_data_dir()
 
+def _resolve_allowed_origins() -> List[str]:
+    """Parse ALLOWED_ORIGINS (comma-separated). Empty => allow localhost dev origins."""
+    raw = os.getenv("ALLOWED_ORIGINS", "")
+    origins = [o.strip() for o in raw.split(",") if o.strip()]
+    return origins or ["http://localhost:3000", "http://127.0.0.1:3000"]
+
 class Settings(BaseModel):
     environment: str = os.getenv("ENVIRONMENT", "development")
     auth_token: str = os.getenv("AUTH_TOKEN", "default-dev-secret-token")
+    allowed_origins: List[str] = _resolve_allowed_origins()
     data_dir: str = os.getenv("DATA_DIR", _default_data_dir)
     vault_dir: str = os.getenv("OBSIDIAN_VAULT_DIR", os.path.join(_default_data_dir, "vault"))
     

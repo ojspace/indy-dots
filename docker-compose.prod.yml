@@ -22,15 +22,14 @@ services:
       dockerfile: Dockerfile
     container_name: indy-gateway
     restart: unless-stopped
-    expose:
-      - "8642"
+    # Bound to loopback only: the host firewall must NOT expose the gateway
+    # directly — all public traffic goes through Caddy.
     ports:
       - "127.0.0.1:8642:8642"
     environment:
       - ENVIRONMENT=production
       - DATA_DIR=/opt/data
-      - GATEWAY_HOST=0.0.0.0
-      - GATEWAY_PORT=8642
+      - PROFILES_DIR=/opt/data/profiles
     env_file:
       - .env
     volumes:
@@ -48,20 +47,18 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8642/health"]
-      interval: 20s
-      timeout: 5s
-      retries: 3
 
   indy-web:
     build:
       context: ./web
       dockerfile: Dockerfile
+      args:
+        # Baked at build time (Vite inlines env vars into the bundle).
+        # Server still enforces AUTH_TOKEN on every route — this only
+        # lets the dashboard authenticate itself.
+        - VITE_AUTH_TOKEN=${VITE_AUTH_TOKEN:-}
     container_name: indy-web
     restart: unless-stopped
-    expose:
-      - "3000"
     ports:
       - "127.0.0.1:3000:3000"
     environment:

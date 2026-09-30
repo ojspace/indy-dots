@@ -83,8 +83,10 @@ if [ ! -f "$REPO_DIR/.env" ]; then
   sed -i "s|change-me-to-a-secure-random-token-min-32-chars|$RANDOM_SECRET|g" "$REPO_DIR/.env"
   sed -i "s|ENVIRONMENT=development|ENVIRONMENT=production|g" "$REPO_DIR/.env"
   sed -i "s|DOMAIN:localhost|DOMAIN:$DOMAIN|g" "$REPO_DIR/Caddyfile"
-  
-  echo "[!] IMPORTANT: Generated secure AUTH_TOKEN: $RANDOM_SECRET"
+
+  chmod 600 "$REPO_DIR/.env"
+  echo "[!] IMPORTANT: A secure AUTH_TOKEN was generated and written to $REPO_DIR/.env"
+  echo "[!] (Never printed to stdout — read it from the file if needed.)"
   echo "[!] Please edit $REPO_DIR/.env to insert your primary model provider API key."
 fi
 

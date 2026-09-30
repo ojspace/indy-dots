@@ -1,143 +1,177 @@
 # Indy-Dots ⚡
-### Autonomous, Cost-Disciplined Alternative to OpenAI Dots & Open-Dots
+### Self-Hosted, Cost-Disciplined AI Operator — an open alternative to Open-Dots
 
-> Built on the production-proven **Hetzner + Hermes** multi-tier orchestration architecture.
-> Run your private AI operator on a $5/mo Hetzner VPS with zero token drain, self-hosted native MCPs, compounding memory, and deterministic safety gates.
+<p align="center">
+  <img src="web/public/brand/hero.png" alt="Indy-Dots — governed orchestrator with specialized agent fleet on a self-hosted VPS" width="820" />
+</p>
 
----
-
-## ⚡ The Core Problem with Open-Dots & OpenAI Dots
-
-Projects like [Open-Dots](https://github.com/Anil-matcha/Open-Dots) and OpenAI Dots attempt to provide an AI workspace with tools and approvals. However, they suffer from four critical architectural flaws:
-
-1. **Catastrophic Token Drain:** Monolithic model loops burn expensive reasoning tokens on simple, deterministic operations (sorting inbox messages, parsing URLs, filtering tables).
-2. **Third-Party SaaS Lock-In (Composio):** Relying on third-party SaaS connectors introduces monthly subscription fees, high latency, data leakage, and fragile API breakages.
-3. **Naive Governance:** Approval systems are often simple JavaScript modals that blindly trust LLM tool generation until human intervention is requested.
-4. **Amnesiac Context:** State is stored in flat SQLite tables that fail to compound knowledge across sessions or sync with tools like Obsidian.
+> Run a private AI operator on a $5/mo Hetzner VPS: tiered model routing, zero-token
+> mechanical triage, ledger-backed safety gates, and a compounding Markdown vault.
+> No SaaS connectors. No fabricated dashboards. MIT licensed.
 
 ---
 
-## 🏛️ How Indy-Dots Solves This (The Hetzner Hermes Approach)
+## What Indy-Dots actually does (and doesn't) do today
+
+**Working:**
+- **Two-tier model routing** — a zero-token mechanical classifier routes every task
+  (`/research`, `/write`, `/seo`, `/ops`, `/code`, or natural language) to a free/cheap
+  worker model or the primary reasoning model. Classification never costs tokens.
+- **Governed action gates** — mutating requests (publish, email, ticket writes, deletes,
+  deploys) pause as `PENDING_APPROVAL` with a dry-run receipt in an append-only JSONL
+  ledger. Red-line content (`.env`, `id_rsa`, `rm -rf`, `DROP TABLE`, force-push,
+  pipe-to-shell) is auto-rejected — even for "read" requests.
+- **Fail-closed verification gate** — outputs must contain concrete evidence (links,
+  paths, code, data). On failure: exactly one corrective pass, then halt and report.
+  If the verifier itself is unreachable, the output is marked unverified — never passed.
+- **Compounding vault** — verified research outputs persist as Obsidian-style Markdown
+  + a SQLite index, and are recalled into future task context.
+- **Real dashboard** — chat, approvals queue, live fleet from `profiles/*.yaml`, vault
+  browser, and metrics computed from the actual ledger (no placeholder numbers).
+- **One-command Hetzner bootstrap** — swap, UFW, Docker, secrets generation, HTTPS via Caddy.
+
+**Not yet (tracked as roadmap):**
+- Tool execution behind the gate (Linear/Gmail/GitHub MCP dispatchers) — the gate
+  records and pauses actions today; the MCP executors are the next milestone.
+- Telegram companion, embeddings-based vault recall, multi-user auth.
+
+---
+
+## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│              Indy Access (Telegram / Web UI / TUI)         │
-└────────────────────────────────┬────────────────────────────────┘
-                                 │
-┌────────────────────────────────▼────────────────────────────────┐
-│             Chief of Staff Orchestrator (Atlas)                 │
-│   - High-Reasoning Intent Classifier (Claude 3.7 / GLM-4)       │
-│   - Verification Gate (DONE-WHEN check with 1-pass max bound)   │
-└───────────────┬──────────────────────────────────┬──────────────┘
-                │                                  │
-┌───────────────▼──────────────┐   ┌───────────────▼──────────────┐
-│  Specialized Role Workers    │   │  Zero-Token Pipeline (jev)   │
-│  - Researcher (Web only)     │   │  - Mechanical sorting/regex  │
-│  - Writer (File draft only)  │   │  - Static triage scripts     │
-│  - SEO (Search Console)      │   │                              │
-│  - Ops (Linear / GitHub)     │   │  * 0 LLM Tokens Burned *     │
-│  * Free / Low-Cost Tier *    │   └──────────────────────────────┘
-└───────────────┬──────────────┘
-                │
-┌───────────────▼─────────────────────────────────────────────────┐
-│                 Governed Action & Safety Engine                 │
-│   - Red Lines: Automatic reject (rm -rf, DROP, private keys)    │
-│   - Yellow Gate: Ledger-backed dry-run receipts & sign-off      │
-│   - Native Self-Hosted MCP Suite (Workspace, Google, Linear)    │
-│   - Compounding Brain: Markdown Vault + SQLite vector recall    │
-└─────────────────────────────────────────────────────────────────┘
+<p align="center">
+  <img src="web/public/brand/architecture.png" alt="Indy-Dots architecture: dashboard → orchestrator core (gates + vault) → Docker services on the VPS" width="720" />
+</p>
+
 ```
 
-### Feature Comparison Matrix
-
-| Capability | OpenAI Dots | Open-Dots (Anil Matcha) | **Indy-Dots (Your Stack)** |
-| :--- | :--- | :--- | :--- |
-| **Hosting Model** | Closed SaaS | Local PC / Prototype Docker | **Production Hetzner VPS ($4–$6/mo)** |
-| **Model Cost Strategy** | Fixed OpenAI Pricing | Single model endpoint (expensive) | **Tiered Model Routing + Free Sub-Agents** |
-| **Deterministic Tasks** | Burns LLM tokens | Burns LLM tokens | **Zero-Token Mechanical Scripts (`jev.py`)** |
-| **Tool Integrations** | Proprietary OpenAI | Third-party **Composio** SaaS | **Native Self-Hosted MCP Servers** |
-| **Safety Governance** | Platform filters | Basic deny-by-default prompts | **Two-Tier (Red Lines + Dry-Run Ledger Gate)** |
-| **Verification Gate** | None (Blind trust) | None | **Enforced DONE-WHEN verification (1-pass cap)** |
-| **Memory System** | Session memory | Flat SQLite rows | **Compounding Markdown Vault + Obsidian sync** |
-| **Primary Interface** | Web App | Browser `localhost:3000` | **Telegram Companion + Fast Web Dashboard** |
+### Why this beats wiring every task through one big model
+| Concern | Typical open clones | Indy-Dots |
+| :--- | :--- | :--- |
+| Intent routing | LLM call per task (costs tokens) | Regex/keyword classifier (**0 tokens**) |
+| Specialist models | One model for everything | Free/cheap workers + primary only for reasoning |
+| Dangerous actions | Prompt-level "please be safe" | Ledger-enforced gates with dry-run receipts |
+| Verification | None (trust the model) | Evidence-based gate, fail-closed, 1-pass cap |
+| Secrets handling | Often readable via tools | Auto-reject at the gate, ledger trail |
+| Memory | Flat session rows | Markdown vault compounding across restarts |
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
-### 1. One-Click Hetzner VPS Deployment
+### 1. One-command Hetzner deployment
 
-Provision a fresh Debian/Ubuntu VPS on Hetzner Cloud (e.g. CX22 or CPX11) and run:
+Provision a fresh Ubuntu 22.04/24.04 VPS (CX22/CPX11/CAX11) pointed at your domain, then:
 
 ```bash
-# Clone the repository
 git clone https://github.com/your-org/indy-dots.git /opt/indy-dots
 cd /opt/indy-dots
-
-# Run the 1-click bootstrap script
 sudo ./scripts/setup-hetzner.sh your-domain.com
 ```
 
-The setup script automatically:
-- Installs Docker Engine & Docker Compose
-- Configures 2GB swap space for low-memory VPS stability
-- Sets up UFW firewall rules (SSH, HTTP, HTTPS)
-- Generates secure cryptographic tokens and initializes `/opt/data`
-- Provisions Caddy with automatic Let's Encrypt SSL certificates
+The bootstrap script installs Docker + Compose, configures 2GB swap and UFW,
+generates a 64-hex `AUTH_TOKEN` into `.env` (`chmod 600`, never printed to stdout),
+and syncs workspace protocols and role profiles to `/opt/data`.
 
-### 2. Configure Environment
-
-Edit `/opt/indy-dots/.env`:
+### 2. Configure models
 
 ```bash
-# Set your primary orchestrator key (Claude 3.7, GLM-4, etc.)
-PRIMARY_MODEL_PROVIDER=openrouter
+nano /opt/indy-dots/.env
+```
+
+```bash
+# Primary reasoning model (Chief of Staff, coder, verification)
 PRIMARY_MODEL=anthropic/claude-3.7-sonnet
 PRIMARY_MODEL_API_KEY=sk-or-v1-...
 
-# Set your worker fleet key (Free DeepSeek, Nemotron Free, etc.)
-WORKER_MODEL_PROVIDER=openrouter
+# Worker fleet (researcher, writer, seo, ops) — free/cheap tier
 WORKER_MODEL=deepseek/deepseek-chat
 WORKER_MODEL_API_KEY=sk-or-v1-...
-
-# (Optional) Add your Telegram Bot Token for mobile access
-TELEGRAM_BOT_TOKEN=123456789:ABCdef...
-TELEGRAM_ALLOWED_USER_IDS=your_telegram_id
 ```
 
-### 3. Launch Services
+Any OpenAI-compatible endpoint works (OpenRouter, Nebius, Groq, DeepSeek, Ollama).
+With **no API key configured, the gateway still runs** — routing and gates work,
+the model step reports honestly that it is not configured.
+
+### 3. Launch
 
 ```bash
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-Access your secure control plane at `https://your-domain.com`.
+Open `https://your-domain.com`, click **Set token**, paste your `AUTH_TOKEN`.
+
+> The web build can also bake the token at build time via `VITE_AUTH_TOKEN`
+> (see `docker-compose.prod.yml`). The server enforces the same token on every
+> route either way.
+
+### Local development
+
+```bash
+# Backend
+cd server
+python3.12 -m venv .venv && source .venv/bin/activate
+pip install -r requirements-dev.txt
+uvicorn app.main:app --reload --port 8642   # AUTH_TOKEN=test-token-abcdef123456 for dev
+
+# Frontend
+cd web && npm install && npm run dev        # proxies /api via nginx in Docker;
+                                            # for `npm run dev`, set VITE_GATEWAY_URL=http://localhost:8642
+
+# Tests
+cd server && pytest tests/ -q
+```
 
 ---
 
-## 🛠️ Repository Architecture
+## Repository Layout
 
-- `scripts/`:
-  - `setup-hetzner.sh`: Complete automated server bootstrap.
-  - `deploy.sh`: GitOps deployment script using rsync checksums and zero-downtime reloads.
-  - `mechanical_triage.py`: Deterministic zero-token task offloader.
-  - `gate_runner.py`: Dry-run and ledger execution validation engine.
-- `workspace-template/`:
-  - `AGENTS.md`: Security red lines, yellow lines, intent routing, and verification gate rules.
-  - `SOUL.md`: Chief of Staff identity, high agency, and token discipline ethos.
-  - `TOOLS.md`: MCP server governance and tool execution boundaries.
-- `profiles/`:
-  - `atlas.yaml`: Chief of Staff orchestrator configuration.
-  - `researcher.yaml`: Deep research worker (restricted to web search/browser).
-  - `writer.yaml`: Content and technical documentation worker.
-  - `seo.yaml`: Search Console worker.
-  - `ops.yaml`: Linear / GitHub sprint operations worker.
-- `server/`:
-  - Python FastAPI async gateway with REST, SSE streaming, and MCP dispatching.
-- `web/`:
-  - React + Tailwind + Vite dark-mode dashboard for chat, approvals, fleet status, and memory browsing.
+```
+server/
+  app/
+    main.py                 # FastAPI gateway (auth on every /api route)
+    auth.py                 # Bearer auth + production boot guard
+    config.py               # Env settings
+    policy.py               # ★ Single source of truth: red lines + mutation intents
+    profiles.py             # Loads profiles/*.yaml into the fleet
+    mechanical_triage.py    # ★ Zero-token intent classifier (canonical)
+    orchestrator/
+      chief_of_staff.py     # Task pipeline: route → recall → gate → dispatch → verify → vault
+      verification_gate.py  # Evidence check, fail-closed, 1-pass corrective
+    gates/
+      approval_manager.py   # Yellow-gate ledger + approval resolution
+    memory/vault.py         # Markdown + SQLite compounding memory
+  tests/                    # 71 tests: policy, triage, gates, API, boot guard
+profiles/                   # Role definitions (atlas, researcher, writer, seo, ops, coder)
+workspace-template/         # AGENTS.md / SOUL.md / TOOLS.md protocols synced to the VPS
+scripts/
+  setup-hetzner.sh          # 1-command VPS bootstrap
+  deploy.sh                 # GitOps sync; REBUILD=1 picks up code changes
+  gate_runner.py            # Standalone CLI gate (same policy module as the server)
+web/                        # React dashboard: chat, approvals, fleet, vault, metrics
+web/public/brand/           # Logo, hero, architecture visuals
+```
 
 ---
 
-## 📜 License
-MIT License. Indy, self-hostable, and inspectable.
+## Safety model
+
+See [SECURITY.md](SECURITY.md) for the full model and the hardened-deployment
+checklist. Short version:
+
+- **Red lines** auto-reject: secrets access, destructive commands, privilege escalation,
+  remote script execution — logged, never executed.
+- **Yellow lines** pause for operator sign-off with a dry-run receipt in the ledger.
+- Production refuses to boot without a strong `AUTH_TOKEN`.
+- Gateway and web bind to loopback in prod; Caddy terminates public HTTPS.
+
+## Contributing
+
+PRs welcome. `pytest tests/ -q` and `npm run build` must pass (CI enforces both).
+If you touch safety behavior, `server/app/policy.py` is the single place to change —
+both the gateway and the CLI runner consume it, and its tests enumerate every rule.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
